@@ -1,0 +1,2 @@
+#define NORMAL_EXIT 0
+#define EXCESS_INIT_LOOPS_ERROR -1

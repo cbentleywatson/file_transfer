@@ -1,0 +1,131 @@
+#import init_connection
+from random import choice
+from socket import timeout
+import serial
+import time
+from serial import Serial
+from  CONFIG_CONSTANTS import *
+#from lib.file_transmitter.desktop_scripts.CONFIG_CONSTANTS import DEFAULT_LISTEN_TIMEOUT, LISTEN_TIMEOUT_ERROR, NORMAL_EXIT
+#ser = serial.Serial()
+# ser.baudrate = 115200
+# ser.port = 'COM6'
+# ser.port = '/dev/tty6' # there isn't a capital S after all
+# # COM 3,4, and 6 are the options
+# # Make Packet Headeer
+# #Send Packet header
+# ser.open()
+ 
+# values = bytearray([4, 9, 62, 144, 56, 30, 147, 3, 210, 89, 111, 78, 184, 151, 17, 129])
+# cur = ser.read()
+# print()
+# ser.write(values)
+# ser.close()
+class transmitter:
+	
+	def __init__(self, port):
+		print("file_transmitter initialized")
+		self.ser = serial.Serial()
+		self.ser.baudrate = 115200
+		#ser.port = 'COM6'
+		self.ser.port = port
+		self.listen_timeout = DEFAULT_LISTEN_TIMEOUT
+		self.wait_loop_timeout = 1
+		self.ser.open()
+		#this is the default value for MY COMPUTER remove it later
+		#self.ser.port = '/dev/tty6'
+	def start_session(self):
+		#listen a while
+		self.ser.flush()
+		#self.ser.reset_input_buffer()
+		start = time.time()
+		final_start =0
+		
+		while(True):
+			#if((time.time()-start)>self.listen_timeout):
+			#	self.ser.close()
+			#	return LISTEN_TIMEOUT_ERROR
+			# this thing should block if serial.read isnt
+			#print("IN LOOP")
+			#print(self.ser.in_waiting)
+			#print("MAIN LOOP BEGIN")
+			self.ser.timeout = 0
+			#client_syn =self.ser.read(1) # opens the transaction
+			#print(self.ser.read(1))
+			#print("Client syn is:")
+			#print(client_syn)
+			#client_syn_formatted = ord(client_syn[0]) # do the ord thing here
+			#client_syn_formatted
+			#self.ser.write(client_syn_formatted) # sends response 1
+			#ack = choice(range(1, 253, 1))
+			#self.ser.write(ack) # sends response 2
+			#self.ser.flushOutput
+			cur_bytes =self.ser.in_waiting 
+			client_syn =self.ser.read(1) 
+			if  cur_bytes>= 1:
+				#print("BYTE found!")
+				
+				ord_client_syn = 0
+				ord_client_syn = ord(client_syn)
+				ack = choice(range(1, 253, 1))
+				self.ser.write(client_syn)
+				self.ser.write(ack)
+				self.ser.flush()
+				time.sleep(.010)
+				#client_final_ack = ord(self.ser.read(1)) # receives the final connection acknowledgment
+				#if client_final_ack == ack+1:
+				#print("final ack")
+				#	self.ser.reset_input_buffer()
+				#	return NORMAL_EXIT
+				# the client did not successfully return the ack meaning a problem occurred
+
+				#i = int.from_bytes(syn, byteorder='big')
+				#i =i+1
+				#i.to_bytes(1, byteorder='big', signed=False)
+				#out = a # this is the ack that is returned
+				#client_syn_formatted = ord(client_syn)
+				#client_syn_formatted = client_syn_formatted + 1
+				#self.ser.write(client_syn_formatted)
+				#self.ser.write(out)
+				#syn = choice(range(1, 253, 1))
+				#ack = choice(range(1, 253, 1))
+				#self.ser.write(syn)
+				#self.ser.write(ack)
+
+				#print("Got a response in start session!")
+				final_start= time.time()
+				# busy wait for the client's response
+				while(self.ser.in_waiting<2) :
+					if((final_start- time.time())>self.wait_loop_timeout):
+						self.ser.reset_input_buffer()
+						break
+					continue
+				if self.ser.in_waiting >= 2:
+					client_final_acknowledge = self.ser.read(1)
+					if client_final_acknowledge == ack+1 :
+						print("final ack")
+						self.ser.reset_input_buffer()
+						return NORMAL_EXIT
+					while(True):
+					
+					# Client responds as fast as possible, so the delay assures the final ack is caught 
+					#time.sleep(.050)
+					#self.ser.read(1)
+						if((final_start- time.time())>self.wait_loop_timeout):
+							break
+						self.ser.reset_input_buffer()
+						if self.ser.in_waiting > 1 :
+							print("in waiting")	
+							client_final_acknowledge = ord(self.ser.read(1))			
+
+							if client_final_acknowledge == ack+1 :
+								print("final ack")
+								self.ser.reset_input_buffer()
+								return NORMAL_EXIT
+							else:
+							#print("Ack")
+								self.ser.reset_input_buffer()
+								break
+						#while(True):
+							#$	time.sleep(1)
+
+			
