@@ -7,6 +7,9 @@ from sys import byteorder
 import serial
 import time
 from serial import Serial
+from binascii import crc32
+
+
 from  CONFIG_CONSTANTS import *
 class transmitter:
 	
@@ -23,8 +26,97 @@ class transmitter:
 		self.expire_time =0
 		self.last_value_read = b'~'
 		self.transaction_wait_time = 1000
+		
+	
+
+
+		self.fileContents = bytes("default_packet_content", 'ascii')
+		self.fileSize = 0
+		#packet data:
+		self.fileOffset = 0
+		self.packetMaxSize = 1024
+		self.packetNumber = 0
+		self.packet_data = bytes("default_packet_content", 'ascii')
+		self.curPacketSize = 0
+		self.curCRC = 0
+		self.endIndex =0
+		self.file_packets_remaining = False
+		self.send_packet_timeout = 2
+	def increment_packet(self):
+
+		self.fileOffset = self.fileOffset + self.curPacketSize
+		self.packetNumber= self.packetNumber + 1
+		self.curPacketSize = min([self.packetMaxSize, (self.fileSize- self.fileOffset) ])
+		self.endIndex = self.fileOffset + self.curPacketSize
+		self.packet_data = self.fileContents[self.fileOffset:self.endIndex]
+		self.curCRC = crc32(self.packet_data)
+		
+		
+		# This means that the current packet should be process and then the system is finished
+		if(self.endIndex== self.fileSize):
+			#print("File Filled")
+			self.file_packets_remaining = False 
+		else:
+			self.file_packets_remaining = True
+	def reset_packets(self):
+		self.fileOffset =0
+		self.curPacketSize =0
+		self.packet_data =b''
+		self.curCRC = 0
+		
+		#self.blankPacket = {'num': 1, 'crc}
 		#this is the default value for MY COMPUTER remove it later
 		#self.ser.port = '/dev/tty6'
+	# Open a file
+	# send a packet ()
+	def openFile(self, fileName):
+		self.curFile = open(fileName, "rb")
+		self.curContent = self.curFile.read()
+	
+	# this function handles the timing and resending stuff needed
+	def sendRawPacket(self):
+		self.send_int(self.fileOffset)
+		self.send_int(self.packetNumber)
+		self.send_int(self.curPacketSize)
+		#self.endIndex
+		self.send_int(self.curCRC) 
+		self.ser.write(self.packet_data) 
+		 
+	def sendPacket(self):
+		# send raw packet, repeat if nesceasry
+		max = (self.send_packet_timeout/self.listen_timeout)
+		for i in range [0, max]:
+			self.sendRawPacket()
+			found, val = self.listen()
+			if(found):
+				if (val == TRANSMIT_RECEIVED)
+					# The packet was sent and the correct ack was received
+					return True
+			# if the wrong command is received or nothing is received things just continue
+		# If the correct value is never found, the packet send failed
+		return False
+		
+	def makePacket(self, offset, size):
+		#
+		end = offset+size
+		packetContent = self.curContent[offset:end:1]
+		packet_crc = binascii.crc32(packetContent,0)
+		curPacketNumber = self.packetNumber + 1
+		# It looks like this would be converted into 
+		#print("makePacket is empty right now")
+	
+	def transmitFile(self, packet):
+		while(self.file_packets_remaining == True):
+			if(self.sendCommand(TRANSMIT, TRANSMIT_RECEIVED) ==False):
+				#Transmit Failed because the command wasn't received
+				return False
+			if (self.sendPacket==False):
+				#
+				# Packet could not be Transmitted after several tries
+				return False
+			self.incrementPacketData()
+		return True
+	
 	def rec_int(self):
 		# this works and is complete
 		self.ser.timeout = READ_TIMEOUT

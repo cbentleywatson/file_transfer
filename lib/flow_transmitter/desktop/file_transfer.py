@@ -43,6 +43,8 @@ if (RUN_TESTS):
 	
 	o_value =test_transmitter.open_esp_file("/sd/test1.b")
 
+	print("Testing CRC 32")
+
 # End of test functions
 
 test_transmitter.close_and_exit()
